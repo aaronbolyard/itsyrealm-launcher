@@ -1,0 +1,3 @@
+# Put the dependencies disclosed in the README here if not using a custom
+# directory.
+*.dll
