@@ -25,10 +25,13 @@ solution "ItsyRealm"
 		files { "Launcher/**.cs" }
 
 		links { "System" }
+		links { "System.Data" }
+		links { "System.Drawing" }
 		links { "System.Windows.Forms" }
 		local_links { "INIFileParser" }
 		local_links { "ICSharpCode.SharpZipLib" }
 		local_links { "Newtonsoft.Json" }
+		local_links { "Markdown" }
 
 		configuration "Debug"
 			targetdir "Build/Binaries/Debug"

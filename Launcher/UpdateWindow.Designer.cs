@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(UpdateWindow));
 			this.updateButton = new System.Windows.Forms.Button();
 			this.patchNotesViewer = new System.Windows.Forms.WebBrowser();
 			this.SuspendLayout();
@@ -66,6 +67,7 @@
 			this.ClientSize = new System.Drawing.Size(464, 601);
 			this.Controls.Add(this.patchNotesViewer);
 			this.Controls.Add(this.updateButton);
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "UpdateWindow";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
 			this.Text = "Update";

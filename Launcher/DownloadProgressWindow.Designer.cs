@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DownloadProgressWindow));
 			this.progressBar = new System.Windows.Forms.ProgressBar();
 			this.downloadLabel = new System.Windows.Forms.Label();
 			this.SuspendLayout();
@@ -55,6 +56,7 @@
 			this.Controls.Add(this.downloadLabel);
 			this.Controls.Add(this.progressBar);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MaximumSize = new System.Drawing.Size(640, 120);
 			this.MinimumSize = new System.Drawing.Size(640, 120);
 			this.Name = "DownloadProgressWindow";

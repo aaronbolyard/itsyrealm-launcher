@@ -1,4 +1,4 @@
-	////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Launcher/LauncherClient.cs
 //
 // This file is a part of the ItsyRealm launcher.
@@ -9,6 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 using ICSharpCode.SharpZipLib.Zip;
 using IniParser;
+using IniParser.Model;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Diagnostics;
@@ -16,6 +17,7 @@ using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Windows.Forms;
 
 namespace ItsyRealm.Launcher
@@ -31,7 +33,7 @@ namespace ItsyRealm.Launcher
 #if ITSYREALM_BUILD_DEBUG
 		public static string Domain => "http://localhost:5000";
 #else
-		public static string Domain = "https://itsyrealm.com"
+		public static string Domain = "https://itsyrealm.com";
 #endif
 
 		GameVersion? mGameVersion;
@@ -44,6 +46,8 @@ namespace ItsyRealm.Launcher
 		Release mBuildRelease;
 
 		LauncherAction mAction = LauncherAction.Play;
+
+		bool mRequestedElevation = false;
 
 		/// <summary>
 		/// Gets the action to perform when launching the client. Defaults to <see cref="LauncherAction.Play">Play</see>
@@ -69,6 +73,10 @@ namespace ItsyRealm.Launcher
 						}
 					}
 				}
+				else if (arguments[i].ToLowerInvariant() == "/elevated")
+				{
+					mRequestedElevation = true;
+				}
 			}
 
 			if (IntPtr.Size == 8)
@@ -87,10 +95,9 @@ namespace ItsyRealm.Launcher
 			{
 				Connect();
 			}
-			catch (Exception ex)
+			catch
 			{
-				MessageBox.Show(ex.Message);
-				mAction = LauncherAction.Quit;
+				// Just don't bother updating the game.
 			}
 		}
 
@@ -102,6 +109,8 @@ namespace ItsyRealm.Launcher
 
 		void Connect()
 		{
+			ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11;
+
 			var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
 			mLauncherVersion = new GameVersion()
 			{
@@ -153,8 +162,18 @@ namespace ItsyRealm.Launcher
 			}
 			else if (!mGameVersion.HasValue || (mServerGameVersion.HasValue && mGameVersion.HasValue && mServerGameVersion.Value.IsNewer(mGameVersion.Value)))
 			{
-				DownloadGame();
+				if (mBuildRelease == null)
+				{
+					MessageBox.Show("Couldn't download latest game build.");
+					return;
+				}
+				else
+				{
+					DownloadGame();
+				}
 			}
+
+			CopyLauncher();
 
 			StartGame();
 		}
@@ -174,6 +193,42 @@ namespace ItsyRealm.Launcher
 					Process.Start(file, "/action updatelauncher");
 				}
 			}
+		}
+
+		void CopyLauncher()
+		{
+			string filename = GetLauncherPath("Launcher.exe");
+			var currentFilename = Process.GetCurrentProcess().MainModule.FileName;
+
+			if (filename != currentFilename)
+			{
+				File.Copy(currentFilename, filename, true);
+				InstallLauncher();
+			}
+		}
+
+		void InstallLauncher()
+		{
+			Shortcut.MakeShortcut(
+				"ItsyRealm",
+				GetLauncherPath("Launcher.exe"),
+				GetLauncherPath(null),
+				"/action play",
+				"Play ItsyRealm!");
+
+			Shortcut.MakeShortcut(
+				"Configure ItsyRealm",
+				GetLauncherPath("Launcher.exe"),
+				GetLauncherPath(null),
+				"/action configure",
+				"Configure ItsyRealm options.");
+
+			Shortcut.MakeShortcut(
+				"Uninstall ItsyRealm",
+				GetLauncherPath("Launcher.exe"),
+				GetLauncherPath(null),
+				"/action uninstall",
+				"Remove ItsyRealm and all associated files.");
 		}
 
 		void DownloadGame()
@@ -203,9 +258,29 @@ namespace ItsyRealm.Launcher
 
 		void StartGame()
 		{
+			string arguments = "";
+			{
+				string settingsPath = GetLauncherPath("settings.ini");
+				if (File.Exists(settingsPath))
+				{
+					FileIniDataParser parser = new FileIniDataParser();
+					var data = parser.ReadFile(settingsPath);
+					
+					if (data.GetKey("debug")?.ToLowerInvariant() == "on")
+					{
+						arguments += " /debug";
+					}
+					
+					if (data.GetKey("anonymous")?.ToLowerInvariant() == "on")
+					{
+						arguments += " /f:anonymous";
+					}
+				}
+			}
+
 			if (File.Exists(GetGamePath("love.exe")))
 			{
-				Process.Start(GetGamePath("love.exe"), String.Format("--fused {0}", GetGamePath("itsyrealm.love")));
+				Process.Start(GetGamePath("love.exe"), String.Format("--fused {0}{1}", GetGamePath("itsyrealm.love"), arguments));
 			}
 			else
 			{
@@ -266,6 +341,124 @@ namespace ItsyRealm.Launcher
 				File.Copy(Process.GetCurrentProcess().MainModule.FileName, filename);
 
 				Process.Start(filename);
+			}
+		}
+
+		/// <summary>
+		/// Shows a panel to configure the game.
+		/// </summary>
+		public void Configure()
+		{
+			string settingsPath = GetLauncherPath("settings.ini");
+
+			IniData data;
+			FileIniDataParser parser = new FileIniDataParser();
+			if (File.Exists(settingsPath))
+			{
+				data = parser.ReadFile(settingsPath);
+			}
+			else
+			{
+				data = new IniData();
+			}
+
+			var window = new ConfigureWindow(data);
+			Application.Run(window);
+
+			parser.WriteFile(settingsPath, data);
+		}
+
+		[Flags]
+		enum MoveFileFlags
+		{
+			MOVEFILE_REPLACE_EXISTING = 0x00000001,
+			MOVEFILE_COPY_ALLOWED = 0x00000002,
+			MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004,
+			MOVEFILE_WRITE_THROUGH = 0x00000008,
+			MOVEFILE_CREATE_HARDLINK = 0x00000010,
+			MOVEFILE_FAIL_IF_NOT_TRACKABLE = 0x00000020
+		}
+
+		[return: MarshalAs(UnmanagedType.Bool)]
+		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+		static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName, MoveFileFlags dwFlags);
+
+		public void Uninstall()
+		{
+			if (!mRequestedElevation && MessageBox.Show("Are you sure you wish to uninstall ItsyRealm?", "Uninstall ItsyRealm", MessageBoxButtons.YesNo) == DialogResult.No)
+			{
+				return;
+			}
+
+			bool isCurrentlyElevated;
+			using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+			{
+				WindowsPrincipal principal = new WindowsPrincipal(identity);
+				isCurrentlyElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
+			}
+
+			if (!isCurrentlyElevated && !mRequestedElevation)
+			{
+				try
+				{
+					Process.Start(new ProcessStartInfo(GetLauncherPath("Launcher.exe"))
+					{
+						Arguments = "/action uninstall /elevated",
+						Verb = "runas"
+					});
+				}
+				catch
+				{
+					// Nothing. User cancelled or something.
+				}
+			}
+			else if (mRequestedElevation)
+			{
+				try
+				{
+					if (Directory.Exists(GetGamePath(null)))
+					{
+						Directory.Delete(GetGamePath(null), true);
+					}
+
+					foreach (var item in Directory.EnumerateFiles(GetLauncherPath(null)))
+					{
+						if (item != GetLauncherPath("Launcher.exe"))
+						{
+							File.Delete(item);
+						}
+					}
+
+					foreach (var directory in Directory.EnumerateDirectories(GetLauncherPath(null)))
+					{
+						Directory.Delete(directory, true);
+					}
+
+					var shortcutPath = Environment.GetFolderPath(Environment.SpecialFolder.StartMenu);
+					shortcutPath = Path.Combine(shortcutPath, "ItsyRealm");
+					if (Directory.Exists(shortcutPath))
+					{
+						Directory.Delete(shortcutPath, true);
+					}
+
+					if (MessageBox.Show("Do you want to delete the save game data? This action cannot be reversed.", "Uninstall ItsyRealm", MessageBoxButtons.YesNo) == DialogResult.Yes)
+					{
+						var saveGamePath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+						saveGamePath = Path.Combine(saveGamePath, "ItsyRealm");
+
+						if (Directory.Exists(saveGamePath))
+						{
+							Directory.Delete(saveGamePath, true);
+						}
+					}
+
+					MoveFileEx(GetLauncherPath("Launcher.exe"), null, MoveFileFlags.MOVEFILE_DELAY_UNTIL_REBOOT);
+					MoveFileEx(GetLauncherPath(null), null, MoveFileFlags.MOVEFILE_DELAY_UNTIL_REBOOT);
+				}
+				catch (Exception ex)
+				{
+					MessageBox.Show(ex.Message, "Uninstall Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
 			}
 		}
 

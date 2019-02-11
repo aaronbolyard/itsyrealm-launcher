@@ -28,8 +28,10 @@ namespace ItsyRealm.Launcher
 						client.Play();
 						break;
 					case LauncherAction.Configure:
+						client.Configure();
 						break;
 					case LauncherAction.Uninstall:
+						client.Uninstall();
 						break;
 					case LauncherAction.UpdateLauncher:
 						client.UpdateLauncher();
