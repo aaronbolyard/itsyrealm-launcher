@@ -21,6 +21,7 @@ solution "ItsyRealm"
 		kind "WindowedApp"
 		language "C#"
 		location "Launcher"
+		icon "ItsyRealm.ico"
 		files { "Launcher/**.cs" }
 
 		links { "System" }

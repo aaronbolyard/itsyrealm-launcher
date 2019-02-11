@@ -22,7 +22,23 @@ namespace ItsyRealm.Launcher
 
 			using (var client = new LauncherClient(arguments))
 			{
-				// Bla bla bla.
+				switch (client.Action)
+				{
+					case LauncherAction.Play:
+						client.Play();
+						break;
+					case LauncherAction.Configure:
+						break;
+					case LauncherAction.Uninstall:
+						break;
+					case LauncherAction.UpdateLauncher:
+						client.UpdateLauncher();
+						break;
+					case LauncherAction.Quit:
+						break;
+					default:
+						break;
+				}
 			}
 		}
 	}
