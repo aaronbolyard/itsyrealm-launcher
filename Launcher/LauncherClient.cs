@@ -299,7 +299,8 @@ namespace ItsyRealm.Launcher
 				{
 					FileName = GetGamePath("love.exe"),
 					Arguments = String.Format("--fused {0}{1}", "itsyrealm.love", arguments),
-					WorkingDirectory = GetGamePath(null)
+					WorkingDirectory = GetGamePath(null),
+					UseShellExecute = false
 				};
 
 				Process.Start(info);
