@@ -155,27 +155,28 @@ namespace ItsyRealm.Launcher
 		/// </summary>
 		public void Play()
 		{
-			if (mServerLauncherVersion.HasValue && mServerLauncherVersion.Value.IsNewer(mLauncherVersion))
+			if (CopyLauncher())
 			{
-				DownloadLauncher();
-				return;
-			}
-			else if (!mGameVersion.HasValue || (mServerGameVersion.HasValue && mGameVersion.HasValue && mServerGameVersion.Value.IsNewer(mGameVersion.Value)))
-			{
-				if (mBuildRelease == null)
+				if (mServerLauncherVersion.HasValue && mServerLauncherVersion.Value.IsNewer(mLauncherVersion))
 				{
-					MessageBox.Show("Couldn't download latest game build.");
+					DownloadLauncher();
 					return;
 				}
-				else
+				else if (!mGameVersion.HasValue || (mServerGameVersion.HasValue && mGameVersion.HasValue && mServerGameVersion.Value.IsNewer(mGameVersion.Value)))
 				{
-					DownloadGame();
+					if (mBuildRelease == null)
+					{
+						MessageBox.Show("Couldn't download latest game build.");
+						return;
+					}
+					else
+					{
+						DownloadGame();
+					}
 				}
+
+				StartGame();
 			}
-
-			CopyLauncher();
-
-			StartGame();
 		}
 
 		void DownloadLauncher()
@@ -195,16 +196,30 @@ namespace ItsyRealm.Launcher
 			}
 		}
 
-		void CopyLauncher()
+		bool CopyLauncher()
 		{
 			string filename = GetLauncherPath("Launcher.exe");
 			var currentFilename = Process.GetCurrentProcess().MainModule.FileName;
 
 			if (filename != currentFilename)
 			{
+				if (!File.Exists(filename))
+				{
+					if (MessageBox.Show(
+						"Do you wish to install the launcher? " +
+						"This will install the launcher and create shortcuts. " +
+						"You can remove it any time from the Start Menu.",
+						"Confirm Installation", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+					{
+						return false;
+					}
+				}
+			
 				File.Copy(currentFilename, filename, true);
 				InstallLauncher();
 			}
+
+			return true;
 		}
 
 		void InstallLauncher()
@@ -280,7 +295,14 @@ namespace ItsyRealm.Launcher
 
 			if (File.Exists(GetGamePath("love.exe")))
 			{
-				Process.Start(GetGamePath("love.exe"), String.Format("--fused {0}{1}", GetGamePath("itsyrealm.love"), arguments));
+				ProcessStartInfo info = new ProcessStartInfo()
+				{
+					FileName = GetGamePath("love.exe"),
+					Arguments = String.Format("--fused {0}{1}", "itsyrealm.love", arguments),
+					WorkingDirectory = GetGamePath(null)
+				};
+
+				Process.Start(info);
 			}
 			else
 			{
@@ -332,7 +354,7 @@ namespace ItsyRealm.Launcher
 		public void UpdateLauncher()
 		{
 			string filename = GetLauncherPath("Launcher.exe");
-			using (var file = File.Open(filename, FileMode.OpenOrCreate))
+			using (var file = File.Open(filename, FileMode.OpenOrCreate, FileAccess.Read))
 			{
 				Lock(file, 0, (ulong)file.Length);
 				file.Close();
