@@ -37,20 +37,29 @@ solution "ItsyRealm"
 			targetdir "Build/Binaries/Debug"
 			objdir "Build/Objects/Launcher/Debug"
 			defines { "ITSYREALM_BUILD_DEBUG" }
+			postbuildcommands {
+				"{RMDIR} \"%{!cfg.targetdir}/Fused\"",
+				"{MKDIR} \"%{!cfg.targetdir}/Fused\"",
+				"ILMerge.exe " ..
+					"\"/out:%{!cfg.targetdir}/Fused/ItsyRealm.Launcher.exe\" "..
+					"\"%{!cfg.targetdir}/ItsyRealm.Launcher.exe\" " ..
+					"\"%{!cfg.targetdir}/*.dll\" " ..
+					"/target:winexe " ..
+					"/targetplatform:\"v4,C:\\Program Files (x86)\\Reference Assemblies\\Microsoft\\Framework\\.NETFramework\\v4.5\" " ..
+					"/wildcards"
+			}
 		configuration "Release"
 			targetdir "Build/Binaries/Release"
 			objdir "Build/Objects/Launcher/Release"
 			defines { "ITSYREALM_BUILD_RELEASE" }
-
-		configuration {}
-		postbuildcommands {
-			"{RMDIR} \"%{!cfg.targetdir}/Fused\"",
-			"{MKDIR} \"%{!cfg.targetdir}/Fused\"",
-			"ILMerge.exe " ..
-				"\"/out:%{!cfg.targetdir}/Fused/ItsyRealm.Launcher.exe\" "..
-				"\"%{!cfg.targetdir}/ItsyRealm.Launcher.exe\" " ..
-				"\"%{!cfg.targetdir}/*.dll\" " ..
-				"/target:winexe " ..
-				"/targetplatform:\"v4,C:\\Program Files (x86)\\Reference Assemblies\\Microsoft\\Framework\\.NETFramework\\v4.5\" " ..
-				"/wildcards"
-		}
+			postbuildcommands {
+				"{RMDIR} \"%{!cfg.targetdir}/Fused\"",
+				"{MKDIR} \"%{!cfg.targetdir}/Fused\"",
+				"ILMerge.exe " ..
+					"\"/out:%{!cfg.targetdir}/Fused/ItsyRealm.Launcher.exe\" "..
+					"\"%{!cfg.targetdir}/ItsyRealm.Launcher.exe\" " ..
+					"\"%{!cfg.targetdir}/*.dll\" " ..
+					"/target:winexe " ..
+					"/targetplatform:\"v4,C:\\Program Files (x86)\\Reference Assemblies\\Microsoft\\Framework\\.NETFramework\\v4.5\" " ..
+					"/wildcards"
+			}
