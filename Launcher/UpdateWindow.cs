@@ -28,7 +28,7 @@ namespace ItsyRealm.Launcher
 		{
 			InitializeComponent();
 
-			var notes = String.Format("{0}\n\nVersion {1}", release.PatchNotes, release.Version.ToVersionString());
+			var notes = String.Format("{0}\n\nVersion {1}", release.PatchNotes.Replace("\r\n", "\n"), release.Version.ToVersionString());
 			Markdown markdown = new Markdown();
 			var html = markdown.Transform(notes);
 			patchNotesViewer.DocumentText = "0";
