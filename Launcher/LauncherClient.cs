@@ -116,7 +116,7 @@ namespace ItsyRealm.Launcher
 			{
 				Major = assemblyVersion.Major,
 				Minor = assemblyVersion.Minor,
-				Revision = assemblyVersion.MajorRevision,
+				Revision = assemblyVersion.Build,
 				Tag = GameVersionTag.Release
 			};
 
